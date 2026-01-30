@@ -15,7 +15,8 @@
     "sqlite3": "^5.1.6",
     "cors": "^2.8.5",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "qrcode": "^1.5.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
