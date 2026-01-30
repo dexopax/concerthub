@@ -4,10 +4,18 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const QRCode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Helper function to generate unique order number
+function generateOrderNumber() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 7);
+    return `ORD-${timestamp}-${random}`.toUpperCase();
+}
 
 // Middleware
 app.use(cors());
@@ -63,8 +71,11 @@ function initDatabase() {
             quantity INTEGER NOT NULL,
             price_per_ticket INTEGER NOT NULL,
             total_price INTEGER NOT NULL,
-            customer_email TEXT,
-            customer_name TEXT,
+            customer_email TEXT NOT NULL,
+            customer_name TEXT NOT NULL,
+            customer_phone TEXT NOT NULL,
+            order_number TEXT UNIQUE NOT NULL,
+            qr_code TEXT,
             order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
             status TEXT DEFAULT 'pending',
             FOREIGN KEY (concert_id) REFERENCES concerts(id)
@@ -287,23 +298,45 @@ app.get('/api/orders', authenticateToken, (req, res) => {
 });
 
 // Create order
-app.post('/api/orders', (req, res) => {
-    const { concert_id, concert_title, ticket_type, quantity, price_per_ticket, total_price, customer_email, customer_name } = req.body;
+app.post('/api/orders', async (req, res) => {
+    const { concert_id, concert_title, ticket_type, quantity, price_per_ticket, total_price, customer_email, customer_name, customer_phone } = req.body;
 
-    db.run(
-        `INSERT INTO orders (concert_id, concert_title, ticket_type, quantity, price_per_ticket, total_price, customer_email, customer_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [concert_id, concert_title, ticket_type, quantity, price_per_ticket, total_price, customer_email, customer_name],
-        function(err) {
-            if (err) {
-                return res.status(500).json({ error: 'Database error' });
+    // Validate required fields
+    if (!customer_email || !customer_name || !customer_phone) {
+        return res.status(400).json({ error: 'Customer information is required' });
+    }
+
+    // Generate unique order number
+    const orderNumber = generateOrderNumber();
+
+    // Generate QR code data (URL to verify ticket)
+    const qrData = `${orderNumber}`;
+    
+    try {
+        // Generate QR code as base64 string
+        const qrCode = await QRCode.toDataURL(qrData);
+
+        db.run(
+            `INSERT INTO orders (concert_id, concert_title, ticket_type, quantity, price_per_ticket, total_price, customer_email, customer_name, customer_phone, order_number, qr_code)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [concert_id, concert_title, ticket_type, quantity, price_per_ticket, total_price, customer_email, customer_name, customer_phone, orderNumber, qrCode],
+            function(err) {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ error: 'Database error' });
+                }
+                res.status(201).json({
+                    id: this.lastID,
+                    order_number: orderNumber,
+                    qr_code: qrCode,
+                    message: 'Order created successfully'
+                });
             }
-            res.status(201).json({
-                id: this.lastID,
-                message: 'Order created successfully'
-            });
-        }
-    );
+        );
+    } catch (error) {
+        console.error('QR code generation error:', error);
+        res.status(500).json({ error: 'Failed to generate QR code' });
+    }
 });
 
 // Get order statistics (protected)
