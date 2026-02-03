@@ -32,7 +32,6 @@ const db = new sqlite3.Database('./concerthub.db', (err) => {
     }
 });
 
-// Initialize database tables
 function initDatabase() {
     // Users table
     db.run(`
@@ -40,8 +39,7 @@ function initDatabase() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            role TEXT DEFAULT 'admin',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            role TEXT DEFAULT 'admin'
         )
     `);
 
@@ -83,74 +81,66 @@ function initDatabase() {
     `);
 
     // Create default admin user
-    const defaultPassword = bcrypt.hashSync('admin123', 10);
-    db.run(`
-        INSERT OR IGNORE INTO users (username, password, role) 
-        VALUES ('admin', ?, 'admin')
-    `, [defaultPassword], (err) => {
-        if (!err) {
-            console.log('✅ Default admin user created (admin/admin123)');
+    const defaultPassword = 'admin123';
+    bcrypt.hash(defaultPassword, 10, (err, hash) => {
+        if (err) {
+            console.error('Error hashing password:', err);
+            return;
         }
+
+        db.run(
+            'INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)',
+            ['admin', hash, 'admin'],
+            (err) => {
+                if (err) {
+                    console.error('Error creating admin user:', err);
+                } else {
+                    console.log('✅ Default admin user created (admin/admin123)');
+                }
+            }
+        );
     });
 
     // Insert default concerts
     const defaultConcerts = [
         {
-            title: "The Rolling Stones",
-            genre: "Рок",
-            date: "2026-03-15",
-            time: "20:00",
-            venue: "Олимпийский стадион, Москва",
-            price: 5000,
-            image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=500",
-            description: "Легендарная британская рок-группа с их новым мировым турне!"
+            title: 'Рок-фестиваль 2025',
+            genre: 'Рок',
+            date: '2025-07-15',
+            time: '19:00',
+            venue: 'Олимпийский',
+            price: 2500,
+            image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=500',
+            description: 'Грандиозный рок-фестиваль с участием лучших групп!'
         },
         {
-            title: "Билли Айлиш",
-            genre: "Поп",
-            date: "2026-04-20",
-            time: "19:00",
-            venue: "СК Лужники, Москва",
-            price: 4500,
-            image: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=500",
-            description: "Яркое выступление мировой поп-звезды с её последним альбомом."
+            title: 'Джазовый вечер',
+            genre: 'Джаз',
+            date: '2025-08-20',
+            time: '20:00',
+            venue: 'Крокус Сити Холл',
+            price: 3500,
+            image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=500',
+            description: 'Незабываемый вечер джазовой музыки в исполнении мировых звезд'
         }
     ];
 
-    db.get('SELECT COUNT(*) as count FROM concerts', (err, row) => {
-        if (!err && row.count === 0) {
-            const stmt = db.prepare(`
-                INSERT INTO concerts (title, genre, date, time, venue, price, image, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `);
-
-            defaultConcerts.forEach(concert => {
-                stmt.run([
-                    concert.title,
-                    concert.genre,
-                    concert.date,
-                    concert.time,
-                    concert.venue,
-                    concert.price,
-                    concert.image,
-                    concert.description
-                ]);
-            });
-
-            stmt.finalize(() => {
-                console.log('✅ Default concerts added');
-            });
-        }
+    defaultConcerts.forEach(concert => {
+        db.run(
+            `INSERT OR IGNORE INTO concerts (title, genre, date, time, venue, price, image, description)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [concert.title, concert.genre, concert.date, concert.time, concert.venue, concert.price, concert.image, concert.description]
+        );
     });
 }
 
-// Auth middleware
+// Middleware to verify JWT token
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        return res.status(401).json({ error: 'Access denied' });
+        return res.status(401).json({ error: 'Access token required' });
     }
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -162,13 +152,11 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// ==================== AUTH ROUTES ====================
-
-// Login
+// Auth routes
 app.post('/api/auth/login', (req, res) => {
     const { username, password } = req.body;
 
-    db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
+    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
         if (err) {
             return res.status(500).json({ error: 'Database error' });
         }
@@ -177,54 +165,38 @@ app.post('/api/auth/login', (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const validPassword = bcrypt.compareSync(password, user.password);
+        const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
-        res.json({
-            token,
-            user: {
-                id: user.id,
-                username: user.username,
-                role: user.role
-            }
-        });
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+        res.json({ token, username: user.username });
     });
 });
 
-// ==================== CONCERTS ROUTES ====================
-
-// Get all concerts
+// Concert routes
 app.get('/api/concerts', (req, res) => {
-    db.all('SELECT * FROM concerts ORDER BY date ASC', (err, concerts) => {
+    db.all('SELECT * FROM concerts ORDER BY date ASC', [], (err, rows) => {
         if (err) {
             return res.status(500).json({ error: 'Database error' });
         }
-        res.json(concerts);
+        res.json(rows);
     });
 });
 
-// Get single concert
 app.get('/api/concerts/:id', (req, res) => {
-    db.get('SELECT * FROM concerts WHERE id = ?', [req.params.id], (err, concert) => {
+    db.get('SELECT * FROM concerts WHERE id = ?', [req.params.id], (err, row) => {
         if (err) {
             return res.status(500).json({ error: 'Database error' });
         }
-        if (!concert) {
+        if (!row) {
             return res.status(404).json({ error: 'Concert not found' });
         }
-        res.json(concert);
+        res.json(row);
     });
 });
 
-// Create concert (protected)
 app.post('/api/concerts', authenticateToken, (req, res) => {
     const { title, genre, date, time, venue, price, image, description } = req.body;
 
@@ -236,28 +208,16 @@ app.post('/api/concerts', authenticateToken, (req, res) => {
             if (err) {
                 return res.status(500).json({ error: 'Database error' });
             }
-            res.status(201).json({
-                id: this.lastID,
-                title,
-                genre,
-                date,
-                time,
-                venue,
-                price,
-                image,
-                description
-            });
+            res.status(201).json({ id: this.lastID, message: 'Concert created successfully' });
         }
     );
 });
 
-// Update concert (protected)
 app.put('/api/concerts/:id', authenticateToken, (req, res) => {
     const { title, genre, date, time, venue, price, image, description } = req.body;
 
     db.run(
-        `UPDATE concerts 
-         SET title = ?, genre = ?, date = ?, time = ?, venue = ?, price = ?, image = ?, description = ?
+        `UPDATE concerts SET title = ?, genre = ?, date = ?, time = ?, venue = ?, price = ?, image = ?, description = ?
          WHERE id = ?`,
         [title, genre, date, time, venue, price, image, description, req.params.id],
         function(err) {
@@ -267,12 +227,11 @@ app.put('/api/concerts/:id', authenticateToken, (req, res) => {
             if (this.changes === 0) {
                 return res.status(404).json({ error: 'Concert not found' });
             }
-            res.json({ message: 'Concert updated', id: req.params.id });
+            res.json({ message: 'Concert updated successfully' });
         }
     );
 });
 
-// Delete concert (protected)
 app.delete('/api/concerts/:id', authenticateToken, (req, res) => {
     db.run('DELETE FROM concerts WHERE id = ?', [req.params.id], function(err) {
         if (err) {
@@ -281,19 +240,17 @@ app.delete('/api/concerts/:id', authenticateToken, (req, res) => {
         if (this.changes === 0) {
             return res.status(404).json({ error: 'Concert not found' });
         }
-        res.json({ message: 'Concert deleted' });
+        res.json({ message: 'Concert deleted successfully' });
     });
 });
 
-// ==================== ORDERS ROUTES ====================
-
-// Get all orders (protected)
+// Order routes
 app.get('/api/orders', authenticateToken, (req, res) => {
-    db.all('SELECT * FROM orders ORDER BY order_date DESC', (err, orders) => {
+    db.all('SELECT * FROM orders ORDER BY order_date DESC', [], (err, rows) => {
         if (err) {
             return res.status(500).json({ error: 'Database error' });
         }
-        res.json(orders);
+        res.json(rows);
     });
 });
 
@@ -339,48 +296,34 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// Get order statistics (protected)
+// Statistics
 app.get('/api/stats', authenticateToken, (req, res) => {
     const stats = {};
 
-    // Total concerts
-    db.get('SELECT COUNT(*) as count FROM concerts', (err, result) => {
-        stats.totalConcerts = result ? result.count : 0;
+    db.get('SELECT COUNT(*) as count FROM concerts', [], (err, row) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        stats.totalConcerts = row.count;
 
-        // Total orders
-        db.get('SELECT COUNT(*) as count, SUM(total_price) as revenue FROM orders', (err, result) => {
-            stats.totalOrders = result ? result.count : 0;
-            stats.totalRevenue = result && result.revenue ? result.revenue : 0;
+        db.get('SELECT COUNT(*) as count FROM orders', [], (err, row) => {
+            if (err) return res.status(500).json({ error: 'Database error' });
+            stats.totalOrders = row.count;
 
-            res.json(stats);
+            db.get('SELECT SUM(total_price) as total FROM orders', [], (err, row) => {
+                if (err) return res.status(500).json({ error: 'Database error' });
+                stats.totalRevenue = row.total || 0;
+                res.json(stats);
+            });
         });
     });
 });
 
-// ==================== SERVE FRONTEND ====================
-
-app.get('/', (req, res) => {
+// Serve index.html for all other routes
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// Start server
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Admin panel: http://localhost:${PORT}/admin`);
     console.log(`🎵 Main site: http://localhost:${PORT}/`);
-});
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-    db.close((err) => {
-        if (err) {
-            console.error(err);
-        }
-        console.log('\n✅ Database connection closed');
-        process.exit(0);
-    });
 });
