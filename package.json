@@ -1,7 +1,7 @@
 {
   "name": "concerthub-backend",
   "version": "1.0.0",
-  "description": "Backend для сайта продажи билетов на концерты",
+  "description": "Concert ticket booking backend with SQLite",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
