@@ -771,45 +771,83 @@
             openCart();
         }
 
-        async function checkout() {
-            if (cart.length === 0) {
-                alert('⚠️ Корзина пуста!');
-                return;
-            }
+async function checkout() {
+    if (cart.length === 0) {
+        alert('⚠️ Корзина пуста!');
+        return;
+    }
+    
+    // Показать форму для ввода контактных данных
+    const customerName = prompt('Введите ваше имя:');
+    if (!customerName || customerName.trim() === '') {
+        alert('❌ Имя обязательно для заполнения');
+        return;
+    }
+    
+    const customerEmail = prompt('Введите ваш email:');
+    if (!customerEmail || !validateEmail(customerEmail)) {
+        alert('❌ Введите корректный email');
+        return;
+    }
+    
+    const customerPhone = prompt('Введите ваш телефон:');
+    if (!customerPhone || customerPhone.trim() === '') {
+        alert('❌ Телефон обязателен для заполнения');
+        return;
+    }
+    
+    const total = cart.reduce((sum, item) => sum + item.totalPrice, 0);
+    
+    // Save orders to backend with contact information
+    try {
+        const orders = [];
+        for (const item of cart) {
+            const response = await fetch(`${API_URL}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    concert_id: item.concertId,
+                    concert_title: item.concertTitle,
+                    ticket_type: item.ticketType,
+                    quantity: item.quantity,
+                    price_per_ticket: item.pricePerTicket,
+                    total_price: item.totalPrice,
+                    customer_email: customerEmail,
+                    customer_name: customerName,
+                    customer_phone: customerPhone
+                })
+            });
             
-            const total = cart.reduce((sum, item) => sum + item.totalPrice, 0);
-            
-            // Save orders to backend
-            try {
-                for (const item of cart) {
-                    await fetch(`${API_URL}/orders`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            concert_id: item.concertId,
-                            concert_title: item.concertTitle,
-                            ticket_type: item.ticketType,
-                            quantity: item.quantity,
-                            price_per_ticket: item.pricePerTicket,
-                            total_price: item.totalPrice,
-                            customer_email: null,
-                            customer_name: null
-                        })
-                    });
-                }
-                
-                alert(`🎉 Спасибо за заказ!\n\nИтого: ${total.toLocaleString()} ₽\n\nВам на email придет подтверждение.`);
-                cart = [];
-                updateCartCount();
-                closeModal('cartModal');
-            } catch (error) {
-                console.error('Error creating order:', error);
-                alert('❌ Ошибка при оформлении заказа. Попробуйте снова.');
+            const result = await response.json();
+            if (response.ok) {
+                orders.push(result);
             }
         }
-
+        
+        if (orders.length > 0) {
+            // Show order confirmation with QR codes
+            let confirmationMessage = `🎉 Спасибо за заказ, ${customerName}!\n\n`;
+            confirmationMessage += `Итого: ${total.toLocaleString()} ₽\n\n`;
+            confirmationMessage += `Билеты отправлены на email: ${customerEmail}\n\n`;
+            confirmationMessage += `Номера заказов:\n`;
+            orders.forEach(order => {
+                confirmationMessage += `- ${order.order_number}\n`;
+            });
+            
+            alert(confirmationMessage);
+            cart = [];
+            updateCartCount();
+            closeModal('cartModal');
+        } else {
+            throw new Error('No orders created');
+        }
+    } catch (error) {
+        console.error('Error creating order:', error);
+        alert('❌ Ошибка при оформлении заказа. Попробуйте снова.');
+    }
+}
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
@@ -868,6 +906,11 @@
 
         // Initialize
         loadConcerts();
+        // Helper function to validate email
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
     </script>
 </body>
 </html>
