@@ -1,15 +1,11 @@
 {
   "name": "concerthub-backend",
   "version": "1.0.0",
-  "description": "Backend для сайта продажи билетов на концерты",
+  "description": "Concert ticket booking backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server.js"
   },
-  "keywords": ["concert", "tickets", "booking"],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
     "sqlite3": "^5.1.6",
@@ -18,8 +14,5 @@
     "jsonwebtoken": "^9.0.2",
     "qrcode": "^1.5.3",
     "resend": "^3.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
   }
 }
