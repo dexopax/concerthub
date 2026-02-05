@@ -88,14 +88,23 @@ function initDatabase() {
     `);
 
     // Create default admin user
-    const defaultPassword = bcrypt.hashSync('admin123', 10);
-    db.run(`
-        INSERT OR IGNORE INTO users (username, password, role) 
-        VALUES ('admin', ?, 'admin')
-    `, [defaultPassword], (err) => {
-        if (!err) {
-            console.log('✅ Default admin user created (admin/admin123)');
+    const defaultPassword = 'admin123';
+    bcrypt.hash(defaultPassword, 10, (err, hash) => {
+        if (err) {
+            console.error('Error hashing password:', err);
+            return;
         }
+
+        db.run(`
+            INSERT OR IGNORE INTO users (username, password, role) 
+            VALUES ('admin', ?, 'admin')
+        `, [hash], (err) => {
+            if (err) {
+                console.error('Error creating admin user:', err);
+            } else {
+                console.log('✅ Default admin user created (admin/admin123)');
+            }
+        });
     });
 
     // Insert default concerts
@@ -229,7 +238,7 @@ app.get('/api/concerts/:id', (req, res) => {
     });
 });
 
-// Create concert (protected)
+// Add concert (protected)
 app.post('/api/concerts', authenticateToken, (req, res) => {
     const { title, genre, date, time, venue, price, image, description } = req.body;
 
@@ -241,17 +250,7 @@ app.post('/api/concerts', authenticateToken, (req, res) => {
             if (err) {
                 return res.status(500).json({ error: 'Database error' });
             }
-            res.status(201).json({
-                id: this.lastID,
-                title,
-                genre,
-                date,
-                time,
-                venue,
-                price,
-                image,
-                description
-            });
+            res.status(201).json({ id: this.lastID, message: 'Concert created' });
         }
     );
 });
@@ -409,15 +408,16 @@ app.post('/api/orders', async (req, res) => {
                 
                 // Send email with ticket
                 try {
-                    await resend.emails.send({
-                        from: 'ConcertHub <onboarding@resend.dev>',
+                    const emailResult = await resend.emails.send({
+                        from: 'ConcertHub <tickets@tales-values.com>',
                         to: customer_email,
                         subject: `Ваш билет на ${concert_title} - Заказ ${orderNumber}`,
                         html: generateTicketEmailHTML(orderData)
                     });
-                    console.log(`✅ Email sent to ${customer_email}`);
+                    console.log(`✅ Email sent to ${customer_email}`, emailResult);
                 } catch (emailError) {
-                    console.error('Email sending error:', emailError);
+                    console.error('❌ Email sending error:', emailError);
+                    console.error('Error details:', JSON.stringify(emailError, null, 2));
                     // Don't fail the order if email fails
                 }
                 
@@ -468,6 +468,7 @@ app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Admin panel: http://localhost:${PORT}/admin`);
     console.log(`🎵 Main site: http://localhost:${PORT}/`);
+    console.log(`📧 Email sender: tickets@tales-values.com`);
 });
 
 // Graceful shutdown
