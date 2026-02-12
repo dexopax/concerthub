@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConcertHub - Билеты на концерты и мероприятия</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .cart-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s;
+        }
+
+        .cart-button:hover {
+            transform: scale(1.05);
+        }
+
+        .cart-count {
+            background: white;
+            color: #667eea;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 30px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        /* Filters Section */
+        .filters-section {
+            background: white;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin: -40px auto 40px;
+            max-width: 1400px;
+            border-radius: 15px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 30px;
+        }
+
+        /* Section Header */
+        .section-header {
+            margin: 40px 0 30px;
+        }
+
+        .section-header h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .section-header p {
+            color: #666;
+            font-size: 18px;
+        }
+
+        /* Events Grid */
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .event-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .event-details {
+            padding: 20px;
+        }
+
+        .event-genre {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .event-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .event-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .event-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .event-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .event-views {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            background: white;
+            padding: 60px 30px;
+            margin-top: 60px;
+        }
+
+        .faq-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+
+        .faq-question {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .faq-answer {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 40px 30px;
+            margin-top: 60px;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .footer-section p {
+            line-height: 1.8;
+            color: #bdc3c7;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #34495e;
+            color: #bdc3c7;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 50px auto;
+            padding: 0;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            position: relative;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 32px;
+            color: white;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .close-modal:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo">🎵 ConcertHub</div>
+            <button class="cart-button" onclick="openCart()">
+                🛒 Корзина
+                <span class="cart-count" id="cartCount">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Билеты на лучшие концерты</h1>
+        <p>Находите и покупайте билеты на мероприятия по всей России</p>
+    </section>
+
+    <!-- Filters -->
+    <div class="container">
+        <div class="filters-section">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>🏙️ Город</label>
+                    <select id="cityFilter" onchange="filterEvents()">
+                        <option value="all">Все города</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📅 Дата</label>
+                    <input type="date" id="dateFilter" onchange="filterEvents()">
+                </div>
+                <div class="filter-group">
+                    <label>🎸 Жанр</label>
+                    <select id="genreFilter" onchange="filterEvents()">
+                        <option value="all">Все жанры</option>
+                        <option value="Рок">Рок</option>
+                        <option value="Поп">Поп</option>
+                        <option value="Метал">Метал</option>
+                        <option value="Джаз">Джаз</option>
+                        <option value="Электро">Электро</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📊 Сортировка</label>
+                    <select id="sortFilter" onchange="filterEvents()">
+                        <option value="date">По дате</option>
+                        <option value="popular">Популярные</option>
+                        <option value="price_asc">Дешевле</option>
+                        <option value="price_desc">Дороже</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Events -->
+        <div class="section-header">
+            <h2>🔥 Популярные мероприятия</h2>
+            <p>Самые ожидаемые концерты этого месяца</p>
+        </div>
+        <div class="events-grid" id="eventsGrid"></div>
+    </div>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="faq-container">
+            <h2 style="text-align: center; margin-bottom: 40px; font-size: 36px;">❓ Часто задаваемые вопросы</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Как купить билет?</div>
+                <div class="faq-answer">Выберите интересующее мероприятие, укажите количество билетов и заполните форму заказа. После оплаты билет придёт на вашу электронную почту с QR-кодом.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Можно ли вернуть билет?</div>
+                <div class="faq-answer">Да, вы можете вернуть билет не позднее чем за 3 дня до мероприятия. Свяжитесь с нашей службой поддержки для оформления возврата.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Как получить билет?</div>
+                <div class="faq-answer">Билет в электронном виде с QR-кодом придёт на указанную вами электронную почту сразу после оформления заказа. Покажите QR-код на входе.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Безопасна ли оплата?</div>
+                <div class="faq-answer">Да, все платежи защищены SSL-шифрованием. Мы не храним данные ваших банковских карт.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3>О компании</h3>
+                <p>ConcertHub - ваш надёжный партнёр в мире развлечений. Мы предлагаем билеты на лучшие концерты и мероприятия по всей России.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Контакты</h3>
+                <p>Email: info@tales-values.com<br>
+                Телефон: +7 (999) 123-45-67<br>
+                Адрес: Москва, ул. Примерная, д. 1</p>
+            </div>
+            <div class="footer-section">
+                <h3>Реквизиты</h3>
+                <p>ИП Иванов Иван Иванович<br>
+                ИНН: 1234567890<br>
+                ОГРНИП: 1234567890123</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 ConcertHub. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <!-- Cart Modal -->
+    <div class="modal" id="cartModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close-modal" onclick="closeModal('cartModal')">×</button>
+                <h2>🛒 Ваша корзина</h2>
+            </div>
+            <div style="padding: 20px;" id="cartItems"></div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkoutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close-modal" onclick="closeModal('checkoutModal')">×</button>
+                <h2>📝 Оформление заказа</h2>
+            </div>
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Ваше имя:</label>
+                    <input type="text" id="customerName" placeholder="Иван Иванов" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Email:</label>
+                    <input type="email" id="customerEmail" placeholder="example@mail.ru" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Телефон:</label>
+                    <input type="tel" id="customerPhone" placeholder="+7 (999) 123-45-67" 
+                           style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                </div>
+                <div style="background: #f8f9ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 18px; font-weight: 600; color: #333;">Итого к оплате:</span>
+                        <span style="font-size: 24px; font-weight: bold; color: #667eea;" id="checkoutTotal">0 ₽</span>
+                    </div>
+                </div>
+                <button onclick="submitOrder()" 
+                        style="width: 100%; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                               color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; 
+                               cursor: pointer; transition: transform 0.2s;"
+                        onmouseover="this.style.transform='scale(1.02)'" 
+                        onmouseout="this.style.transform='scale(1)'">
+                    ✅ Оформить заказ
+                </button>
+                <p style="margin-top: 15px; text-align: center; color: #999; font-size: 14px;">
+                    Билеты будут отправлены на указанный email
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin.includes('localhost') 
+            ? 'http://localhost:3000/api' 
+            : '/api';
+
+        let allEvents = [];
+        let cart = [];
+
+        // Load events
+        async function loadEvents() {
+            try {
+                const response = await fetch(`${API_URL}/concerts?sort=popular`);
+                allEvents = await response.json();
+                renderEvents(allEvents);
+                loadCities();
+            } catch (error) {
+                console.error('Error loading events:', error);
+            }
+        }
+
+        // Load cities
+        async function loadCities() {
+            try {
+                const response = await fetch(`${API_URL}/cities`);
+                const cities = await response.json();
+                const cityFilter = document.getElementById('cityFilter');
+                cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    cityFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading cities:', error);
+            }
+        }
+
+        // Render events
+        function renderEvents(events) {
+            const grid = document.getElementById('eventsGrid');
+            grid.innerHTML = '';
+
+            events.forEach(event => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.onclick = () => openEventModal(event);
+
+                const date = new Date(event.date);
+                const formattedDate = date.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                card.innerHTML = `
+                    <img src="${event.image_url}" alt="${event.title}" class="event-image" onerror="this.src='https://via.placeholder.com/400x220/667eea/ffffff?text=ConcertHub'">
+                    <div class="event-details">
+                        <span class="event-genre">${event.genre}</span>
+                        <div class="event-title">${event.title}</div>
+                        <div class="event-meta">
+                            <div class="event-meta-item">📅 ${formattedDate}</div>
+                            <div class="event-meta-item">📍 ${event.venue}, ${event.city}</div>
+                        </div>
+                        <div class="event-price">от ${event.price.toLocaleString()} ₽</div>
+                        <div class="event-views">👁️ ${event.views} просмотров</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Filter events
+        async function filterEvents() {
+            const city = document.getElementById('cityFilter').value;
+            const date = document.getElementById('dateFilter').value;
+            const genre = document.getElementById('genreFilter').value;
+            const sort = document.getElementById('sortFilter').value;
+
+            let url = `${API_URL}/concerts?sort=${sort}`;
+            if (city !== 'all') url += `&city=${city}`;
+            if (date) url += `&date=${date}`;
+            if (genre !== 'all') url += `&genre=${genre}`;
+
+            try {
+                const response = await fetch(url);
+                const events = await response.json();
+                renderEvents(events);
+            } catch (error) {
+                console.error('Error filtering events:', error);
+            }
+        }
+
+        // Event modal
+        function openEventModal(event) {
+            alert(`Открытие карточки: ${event.title}\n\nВ следующей версии здесь будет детальная информация о мероприятии с возможностью выбора типа билетов.`);
+        }
+
+        // Cart functions
+        function openCart() {
+            if (cart.length === 0) {
+                alert('⚠️ Корзина пуста!');
+                return;
+            }
+            alert('Функция корзины будет доступна после интеграции платёжной системы.');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function updateCartCount() {
+            document.getElementById('cartCount').textContent = cart.length;
+        }
+
+        // Initialize
+        loadEvents();
+    </script>
+</body>
+</html>
